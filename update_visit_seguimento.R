@@ -31,7 +31,7 @@ if(class(con_mpi)[1]=="MySQLConnection"){
     
     load(file = 'location.RData')
     
-    for ( k in 3:nrow(location) ) {
+    for ( k in 1:dim(location) ) {
       
       location_uuid <- location$uuid[k]
       location_id   <- location$location_id[k]
@@ -46,27 +46,28 @@ if(class(con_mpi)[1]=="MySQLConnection"){
           
           if(nrow(patients)>0){
             
+            
             before <-  Sys.time()
             
             for (i in 1:nrow(patients)) {
               
-              sql_openmrs_patient_pickups <- createSqlQueryGetOpenMRSDrugPickups(param.patientid = patients$patientid[i],param.location =location_id )
-              sql_mpi_patient_pickups     <- createSqlQueryGetMPIDrugPickups(param.patientid = patients$patientid[i],param.location =location_id )
-              df_mpi_patient_drugs        <- getMasterPatientIndexData(con.openmrs = con_mpi ,query = sql_mpi_patient_pickups )
-              df_openmrs_patient_drugs    <- getOpenmrsData(con.openmrs = con_openmrs ,query = sql_openmrs_patient_pickups )
+              sql_openmrs_patient_seguimentos  <- createSqlQueryGetOpenMRSConsultas(param.patientid = patients$patientid[i],param.location =location_id )
+              sql_mpi_patient_seguimentos      <- createSqlQueryGetMPIDConsultas(param.patientid = patients$patientid[i],param.location =location_id )
+              df_mpi_patient_seguimentos       <- getMasterPatientIndexData(con.openmrs = con_mpi ,query = sql_mpi_patient_seguimentos )
+              df_openmrs_patient_seguimentos   <- getOpenmrsData(con.openmrs = con_openmrs ,query = sql_openmrs_patient_seguimentos )
           
-                if(nrow(df_openmrs_patient_drugs) >0 ) {
-                  df_openmrs_patient_drugs$location_uuid <- location_uuid
-                  df_openmrs_patient_drugs$patient_uuid <- patients$uuid[i]
-                  df_openmrs_patient_drugs[is.na(df_openmrs_patient_drugs)] <- "2000/01/01"
+                if(nrow(df_openmrs_patient_seguimentos) >0 ) {
+                  df_openmrs_patient_seguimentos$location_uuid <- location_uuid
+                  df_openmrs_patient_seguimentos$patient_uuid <- patients$uuid[i]
+                  df_openmrs_patient_seguimentos[is.na(df_openmrs_patient_seguimentos)] <- "2000/01/01"
                 
-                df_update_drug <-  left_join(x = df_openmrs_patient_drugs,y = df_mpi_patient_drugs, by="uuid" ) %>%   
-                  select ("pickup_date.x","next_scheduled.x","uuid","location_uuid.x","patient_uuid.x") %>% 
-                  rename(pickup_date=pickup_date.x,next_scheduled=next_scheduled.x , location_uuid=location_uuid.x,patient_uuid=patient_uuid.x)
-                if(nrow(df_update_drug)> 0){
+                df_update_seguimento <-  left_join(x = df_openmrs_patient_seguimentos,y = df_mpi_patient_seguimentos, by="uuid" ) %>%   
+                  select ("date_visit.x","next_scheduled.x","uuid","location_uuid.x","patient_uuid.x") %>% 
+                  rename(date_visit=date_visit.x,next_scheduled=next_scheduled.x , location_uuid=location_uuid.x,patient_uuid=patient_uuid.x)
+                if(nrow(df_update_seguimento)> 0){
                   
                   
-                  UpdateMpiData( df = df_update_drug,table.name = "drug_pickup",con.sql = con_mpi)
+                  UpdateMpiData(df = df_update_seguimento,table.name = "patient_visit",con.sql = con_mpi)
                   
                   
                 }
@@ -80,24 +81,21 @@ if(class(con_mpi)[1]=="MySQLConnection"){
               
             } 
             
-            after <- Sys.time()
-      
             # If process finished sucessfully
             if(i==nrow(patients)){
               after <- Sys.time()
               elapsed_time <- after -before
               saveProcessLog(mpi.con = con_mpi,process.date = curr_datetime,process.type = 'Fetch Seguimento info',affected.rows = 0,
                              process.status ='Iniated',error.msg = '' ,table = paste0(db_name,'.obs'),location.uuid = location_uuid,elapsed.time=as.character(elapsed_time))
-           
+              
               writeLog(file = log_file,msg =paste0("-------------------------------------------------------------------------------------------"))
               writeLog(file = log_file,msg =paste0("-- Fetch Drug info for DB: ", db_name, " took ", elapsed_time))
               writeLog(file = log_file,msg =paste0("-------------------------------------------------------------------------------------------"))
               print(paste0("-------------------------------------------------------------------------------------------"))
               print(paste0("-- Fetch Drug info for DB: ",db_name, " took ", elapsed_time))
               print(paste0("-------------------------------------------------------------------------------------------"))
-               }
-          
-            
+              }
+
           }
           
           

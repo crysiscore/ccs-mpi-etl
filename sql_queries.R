@@ -168,8 +168,8 @@ GROUP BY patient_id
 
 sql_query_openmrs_consulta_info <-  "
 
-Select DATE_FORMAT(visitas.encounter_datetime  ,'%Y/%m/%d')  as data_visita , DATE_FORMAT(o.value_datetime  ,'%Y/%m/%d') 
-as value_datetime, o.uuid
+Select DATE_FORMAT(visitas.encounter_datetime  ,'%Y/%m/%d')  as date_visit , DATE_FORMAT(o.value_datetime  ,'%Y/%m/%d') 
+as next_scheduled, o.uuid
 		from
 
 			(	select 	e.patient_id, encounter_datetime
@@ -180,7 +180,7 @@ as value_datetime, o.uuid
 			inner join encounter e on e.patient_id=visitas.patient_id
 			inner join obs o on o.encounter_id=e.encounter_id			
 			where o.concept_id=1410 and o.voided=0 and e.voided=0 and e.encounter_datetime=visitas.encounter_datetime and 
-			e.encounter_type in (9,6)  and e.location_id=@location  group by data_visita  order  by  data_visita desc    
+			e.encounter_type in (9,6)  and e.location_id=@location  group by date_visit  order  by  date_visit desc    
 "
 
 
@@ -245,5 +245,18 @@ SELECT drug_pickup.pickup_date,
     drug_pickup.location_uuid,
     drug_pickup.uuid
 FROM ccs_mpi.drug_pickup
+where patient_uuid = @patient_id ;
+"
+
+
+
+sql_query_mpi_consulta_info <- "
+SELECT 
+       patient_visit.date_visit,
+       patient_visit.next_scheduled,
+       patient_visit.uuid,
+       patient_visit.patient_uuid,
+       patient_visit.location_uuid
+FROM   ccs_mpi.patient_visit
 where patient_uuid = @patient_id ;
 "
