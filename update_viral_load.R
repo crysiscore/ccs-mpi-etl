@@ -5,7 +5,7 @@ library(dplyr)
 
 wd <- '/home/agnaldo/Git/ccs-mpi-etl'
 setwd(wd)
-source('db-connection.R')
+source('config/db-connection.R')
 source('helper_functions.R')
 source('sql_queries.R')
 
@@ -23,13 +23,13 @@ con_mpi <- getDbConnection(openmrs.user = mpi_user,openmrs.password = mpi_passwo
 
 # Not Run
 # location <- getMasterPatientIndexData(con.openmrs = con_mpi,query = "select * from location;")
-# save(location,file = 'location.RData')
+# save(location,file = 'data/location.RData')
 
 if(class(con_mpi)[1]=="MySQLConnection"){
   
   if(dbIsValid(con_mpi)){
     
-    load(file = 'location.RData')
+    load(file = 'data/location.RData')
     
     for ( k in 1:dim(location) ) {
       

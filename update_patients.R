@@ -4,7 +4,7 @@ library(RMySQL)
 #Set working dir
 wd <- '/home/agnaldo/Git/ccs-mpi-etl'
 setwd(wd)
-source('db-connection.R')
+source('config/db-connection.R')
 source('helper_functions.R')
 source('sql_queries.R')
 
@@ -16,7 +16,7 @@ close( file( log_file, open="w" ) )
 
 # Busca o nome de todas BD openmrs no servidor de backups
 
-vec_db_names <- readLines('unidades_sanitarias.txt')
+vec_db_names <- readLines('data/unidades_sanitarias.txt')
 
 
 # Connect to Master Patient Index

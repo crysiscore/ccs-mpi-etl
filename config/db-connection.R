@@ -12,7 +12,6 @@ mpi_db.name='ccs_mpi'                   # ******** modificar
 mpi_host='192.168.1.10'                 # ******** modificar
 mpi_port=3333                           # ******** modificar
 
-
-
+## set project directory
 
 
