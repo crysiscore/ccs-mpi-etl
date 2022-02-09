@@ -1,0 +1,4 @@
+# Container for mpi
+
+Master Patient index
+docker run --name mysql_master_patient_index    -v /data_ssd_2/mysqldata:/var/lib/mysql   -v /data_ssd_2/mysql_docker:/etc/mysql/conf.d  -e MYSQL_ROOT_PASSWORD=mpi@openmrs   -p 3333:3306    -d   mysql:8.0.27  

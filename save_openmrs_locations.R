@@ -7,7 +7,7 @@ source('helper_functions.R')
 source('sql_queries.R')
 
 # clear log file
-log_file <- 'log_file.txt'
+log_file <- 'location_log_file.txt'
 close( file( log_file, open="w" ) )
 
 

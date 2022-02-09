@@ -204,9 +204,9 @@ Select DATE_FORMAT(visitas.encounter_datetime ,'%Y/%m/%d')  as pickup_date ,DATE
 
 
 sql_query_openmrs_viral_load_info <- "
-
-
-  SELECT 	e.patient_id,
+  
+  
+  select uuid, if(valor_ultima_carga is null ,carga_viral_qualitativa , valor_ultima_carga ) as viral_load_value,viral_load_type , data_cv , origem_result  from (SELECT 	e.patient_id,
 				CASE o.value_coded
                 WHEN 1306  THEN  'Nivel baixo de detencao'
                 WHEN 23814 THEN  'Indectetavel'
@@ -217,15 +217,17 @@ sql_query_openmrs_viral_load_info <- "
                 WHEN 23904 THEN  'Menor que 839 copias/ml'
                 ELSE ''
                 END  AS carga_viral_qualitativa,
-				        DATE_FORMAT(ult_cv.data_cv_qualitativa  ,'%Y/%m/%d')  as data_ultima_carga
-                DATE_FORMAT(o.value_numeric ,'%Y/%m/%d')  as valor_ultima_carga
-                fr.name as Origem_Resultado
+                if (o.value_coded is null, 'Numerico','Qualitativa') as  viral_load_type,
+				        DATE_FORMAT(ult_cv.data_cv_qualitativa  ,'%Y/%m/%d')  as data_cv,
+                o.value_numeric  as valor_ultima_carga,
+                fr.name as origem_result,
+                o.uuid
                 FROM  encounter e 
                 inner join	(
 							SELECT 	e.patient_id,encounter_datetime as data_cv_qualitativa
 							from encounter e inner join obs o on e.encounter_id=o.encounter_id
-							where e.encounter_type IN (6,9,13,53) AND e.voided=0 AND o.voided=0 AND o.concept_id in( 856, 1305)  and 
-							patient_id =@patient_id 
+							where e.encounter_type IN (6,9,13,53) AND e.voided=0 AND o.voided=0 AND o.concept_id in( 856, 1305)
+							 and patient_id =@patient_id
 				) ult_cv 
                 on e.patient_id=ult_cv.patient_id
 				inner join obs o on o.encounter_id=e.encounter_id 
@@ -233,7 +235,7 @@ sql_query_openmrs_viral_load_info <- "
                  where e.encounter_datetime=ult_cv.data_cv_qualitativa	
 				and	e.voided=0  AND  e.location_id=@location AND   e.encounter_type in (6,9,13,53) and
 				o.voided=0 AND 	o.concept_id in( 856, 1305) 
-        and e.location_id=@location  group by encounter_datetime order  by  encounter_datetime desc
+        and e.location_id=@location  group by encounter_datetime order  by  encounter_datetime desc ) cv 
 "
 
 
@@ -258,5 +260,19 @@ SELECT
        patient_visit.patient_uuid,
        patient_visit.location_uuid
 FROM   ccs_mpi.patient_visit
+where patient_uuid = @patient_id ;
+"
+
+
+sql_query_mpi_viral_load_info <- "
+SELECT 
+    viral_load.uuid ,
+    viral_load.viral_load_value,
+    viral_load.viral_load_type,
+    viral_load.data_cv,
+    viral_load.origem_result,
+    viral_load.location_uuid,
+    viral_load.patient_uuid
+FROM ccs_mpi.viral_load
 where patient_uuid = @patient_id ;
 "

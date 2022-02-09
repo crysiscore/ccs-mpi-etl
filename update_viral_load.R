@@ -11,7 +11,7 @@ source('sql_queries.R')
 
 
 # clear log file
-log_file <- 'log_file_visits.txt'
+log_file <- 'log_file_viral_load.txt'
 close( file( log_file, open="w" ) )
 curr_date <- Sys.Date()
 curr_datetime <-Sys.time()
@@ -51,23 +51,24 @@ if(class(con_mpi)[1]=="MySQLConnection"){
             
             for (i in 1:nrow(patients)) {
               
-              sql_openmrs_patient_seguimentos  <- createSqlQueryGetOpenMRSConsultas(param.patientid = patients$patientid[i],param.location =location_id )
-              sql_mpi_patient_seguimentos      <- createSqlQueryGetMPIDConsultas(param.patientid = patients$patientid[i],param.location =location_id )
-              df_mpi_patient_seguimentos       <- getMasterPatientIndexData(con.openmrs = con_mpi ,query = sql_mpi_patient_seguimentos )
-              df_openmrs_patient_seguimentos   <- getOpenmrsData(con.openmrs = con_openmrs ,query = sql_openmrs_patient_seguimentos )
+              sql_openmrs_patient_carga_viral  <- createSqlQueryGetOpenMRSViraLoad(param.patientid = patients$patientid[i],param.location =location_id )
+              sql_mpi_patient_carga_viral      <- createSqlQueryGetMPIDViraLoad(param.patientid = patients$patientid[i],param.location =location_id )
+              df_mpi_patient_carga_viral       <- getMasterPatientIndexData(con.openmrs = con_mpi ,query = sql_mpi_patient_carga_viral )
+              df_openmrs_patient_carga_viral   <- getOpenmrsData(con.openmrs = con_openmrs ,query = sql_openmrs_patient_carga_viral )
           
-                if(nrow(df_openmrs_patient_seguimentos) >0 ) {
-                  df_openmrs_patient_seguimentos$location_uuid <- location_uuid
-                  df_openmrs_patient_seguimentos$patient_uuid <- patients$uuid[i]
-                  df_openmrs_patient_seguimentos[is.na(df_openmrs_patient_seguimentos)] <- "2000/01/01"
+                if(nrow(df_openmrs_patient_carga_viral) >0 ) {
+                  df_openmrs_patient_carga_viral$location_uuid <- location_uuid
+                  df_openmrs_patient_carga_viral$patient_uuid <- patients$uuid[i]
+                  df_openmrs_patient_carga_viral[is.na(df_openmrs_patient_carga_viral)] <- "2000/01/01"
                 
-                df_update_seguimento <-  left_join(x = df_openmrs_patient_seguimentos,y = df_mpi_patient_seguimentos, by="uuid" ) %>%   
-                  select ("date_visit.x","next_scheduled.x","uuid","location_uuid.x","patient_uuid.x") %>% 
-                  rename(date_visit=date_visit.x,next_scheduled=next_scheduled.x , location_uuid=location_uuid.x,patient_uuid=patient_uuid.x)
-                if(nrow(df_update_seguimento)> 0){
+                df_update_viral_load <-  left_join(x = df_openmrs_patient_carga_viral,y = df_mpi_patient_carga_viral, by="uuid" ) %>%   
+                  select("uuid","viral_load_value.x","viral_load_type.x","data_cv.x","origem_result.x","location_uuid.x","patient_uuid.x") %>% 
+                  rename(viral_load_value=viral_load_value.x,viral_load_type=viral_load_type.x , origem_result=origem_result.x,data_cv=data_cv.x,
+                         location_uuid=location_uuid.x,patient_uuid=patient_uuid.x)
+                if(nrow(df_update_viral_load)> 0){
                   
                   
-                  UpdateMpiData(df = df_update_seguimento,table.name = "patient_visit",con.sql = con_mpi)
+                  UpdateMpiData(df = df_update_viral_load,table.name = "viral_load",con.sql = con_mpi)
                   
                   
                 }

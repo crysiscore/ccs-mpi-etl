@@ -45,7 +45,7 @@ getDbConnection <- function(openmrs.user,openmrs.password,openmrs.db.name, openm
     
   },
   error = function(cond) {
-    error_msg <- paste0(Sys.time(), "  MySQL - Nao foi possivel connectar-se a host: ", openmrs.host, '  db:',openmrs.db.name, "...",'user:',openmrs.db.name, ' passwd: ', openmrs.password)
+    error_msg <- paste0(Sys.time(), "  MySQL - Nao foi possivel connectar-se a host: ", openmrs.host, '  db:',openmrs.db.name, "...",'user:',openmrs.user, ' passwd: ', openmrs.password)
     writeLog(file = log_file,msg = error_msg)
     writeLog(file = log_file,msg = as.character(cond))
     print(paste0(Sys.time(), "  MySQL - Nao foi possivel connectar-se a host: ", openmrs.host, '  db:',openmrs.db.name, "...",'user:',openmrs.db.name, ' passwd: ', openmrs.password))
@@ -171,13 +171,28 @@ saveProcessLog <- function(mpi.con, process.date,process.type,affected.rows,proc
 #' @param openmrs.con objecto de conexao com mysql    
 #' @return location info
 #' @examples
-#' default_loc = getOpenmrsDefaultLocation(con_openmrs)
+#' query = createSqlQueryPatient(con_openmrs)
 createSqlQueryPatient <- function( param.location,param.end.date){
   
  sql_tmp <- sql_query_mpi_patients
  sql_tmp <- gsub(x =   sql_tmp, pattern = '@endDate', replacement = paste0("'",as.character(param.end.date),"'" ))
  sql_tmp <- gsub(x = sql_tmp,pattern = '@location',replacement =as.character(param.location) )
  sql_tmp
+  
+}
+
+
+#' Cria query com parametros de entrada
+#' 
+#' @param openmrs.con objecto de conexao com mysql    
+#' @return location info
+#' @examples
+#' query = createSqlQueryPatientMpi(con_openmrs)
+createSqlQueryPatientMpi <- function( param.location){
+  
+  sql_tmp <- "select * from ccs_mpi.patient where location_uuid= @location ;"
+  sql_tmp <- gsub(x = sql_tmp,pattern = '@location',replacement =paste0("'",as.character(param.location),"'" ) )
+  sql_tmp
   
 }
 
@@ -268,16 +283,9 @@ createSqlQueryGetOpenMRSConsultas <- function( param.patientid,param.location){
   
 }
 
-
-#' Cria query com parametros de entrada
-#' 
-#' @param openmrs.con objecto de conexao com mysql    
-#' @return sql query
-#' @examples
-#' sql_drug_pickup = createSqlQueryDrugPickup(con_openmrs)
-createSqlQueryGetMPIDrugPickups <- function( param.patientid,param.location){
+createSqlQueryGetOpenMRSViraLoad <- function( param.patientid,param.location){
   
-  sql_tmp <- sql_query_mpi_drug_pickups
+  sql_tmp <- sql_query_openmrs_viral_load_info
   sql_tmp <- gsub(x =   sql_tmp, pattern = '@patient_id', replacement = as.character(param.patientid ) )
   sql_tmp <- gsub(x = sql_tmp,pattern = '@location',replacement =as.character(param.location) )
   sql_tmp
@@ -290,11 +298,38 @@ createSqlQueryGetMPIDrugPickups <- function( param.patientid,param.location){
 #' @return sql query
 #' @examples
 #' sql_drug_pickup = createSqlQueryDrugPickup(con_openmrs)
+createSqlQueryGetMPIDrugPickups <- function( param.patientid,param.location){
+  
+  sql_tmp <- sql_query_mpi_drug_pickups
+  sql_tmp <- gsub(x =   sql_tmp, pattern = '@patient_id', replacement = as.character(param.patientid ) )
+  #sql_tmp <- gsub(x = sql_tmp,pattern = '@location',replacement =as.character(param.location) )
+  sql_tmp
+  
+}
+
+
+
+#' Cria query com parametros de entrada
+#' 
+#' @param openmrs.con objecto de conexao com mysql    
+#' @return sql query
+#' @examples
+#' sql_drug_pickup = createSqlQueryDrugPickup(con_openmrs)
 createSqlQueryGetMPIDConsultas <- function( param.patientid,param.location){
   
   sql_tmp <- sql_query_mpi_consulta_info
   sql_tmp <- gsub(x =   sql_tmp, pattern = '@patient_id', replacement = as.character(param.patientid ) )
-  sql_tmp <- gsub(x = sql_tmp,pattern = '@location',replacement =as.character(param.location) )
+  #sql_tmp <- gsub(x = sql_tmp,pattern = '@location',replacement =as.character(param.location) )
+  sql_tmp
+  
+}
+
+
+createSqlQueryGetMPIDViraLoad  <- function( param.patientid,param.location){
+  
+  sql_tmp <- sql_query_mpi_viral_load_info
+  sql_tmp <- gsub(x =   sql_tmp, pattern = '@patient_id', replacement = as.character(param.patientid ) )
+  #sql_tmp <- gsub(x = sql_tmp,pattern = '@location',replacement =as.character(param.location) )
   sql_tmp
   
 }
@@ -403,6 +438,54 @@ UpdateMpiData <- function( df,table.name, con.sql){
      
    }
  }
+ else if(table.name=="viral_load"){
+    
+    for (i in 1:nrow(df)) {
+      
+      data_cv    <- df$data_cv[i]
+      viral_load_type <- df$viral_load_type[i]
+      viral_load_value   <- df$viral_load_value[i]
+      location_uuid  <- df$location_uuid[i]
+      origem_result   <- df$origem_result[i]
+      patient_uuid  <- df$patient_uuid[i]
+      uuid           <- df$uuid[i]
+      
+      insert_string <- paste0("INSERT INTO ccs_mpi.viral_load (uuid,viral_load_value,viral_load_type,data_cv,origem_result,location_uuid,patient_uuid)   VALUES( '", uuid, "' , '" , viral_load_value,"' , '" , viral_load_type,"' , '", data_cv,"' , '","' , '", origem_result,"' , '",location_uuid, "' , '"  , patient_uuid ,"' );" )
+      
+      result <- tryCatch({
+        
+        dbExecute(con.sql, insert_string)
+        
+        
+      },
+      error = function(cond) {
+        error_msg <- paste0(Sys.time(), "  MySQL - Nao foi possivel inserir  a carga virla do paciente: ", patient_uuid, '  db:',location_uuid, "...", ' uuid : ', uuid)
+        writeLog(file = log_file,msg = error_msg)
+        writeLog(file = log_file,msg = as.character(cond))
+        print(as.character(cond))
+        print(error_msg)
+        saveErrorLog(mpi.con = con_mpi, process.date = Sys.time(),process.type = 'Insert on table viral_load',affected.rows = 0,
+                     process.status ='Failed', error.msg = as.character(cond)  , table = table.name ,location.uuid = location_uuid)
+        saveErrorLog(mpi.con = con_mpi, process.date = Sys.time(),process.type = 'Insert on table viral_load',affected.rows = 0,
+                     process.status ='Failed', error.msg = error_msg  , table = table.name ,location.uuid = location_uuid)
+        
+      },
+      warning = function(cond) {
+        writeLog(file = log_file,msg = as.character(cond))
+        # Choose a return value in case of warning
+        print(as.character(cond))
+        
+      },
+      finally = {
+        # NOTE:
+        # Here goes everything that should be executed at the end,
+        
+      })
+      #TODO comment this when running in production
+      #print(result)
+      
+    }
+  }
  else{
    # Do nothing
    }
