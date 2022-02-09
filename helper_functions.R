@@ -450,7 +450,7 @@ UpdateMpiData <- function( df,table.name, con.sql){
       patient_uuid  <- df$patient_uuid[i]
       uuid           <- df$uuid[i]
       
-      insert_string <- paste0("INSERT INTO ccs_mpi.viral_load (uuid,viral_load_value,viral_load_type,data_cv,origem_result,location_uuid,patient_uuid)   VALUES( '", uuid, "' , '" , viral_load_value,"' , '" , viral_load_type,"' , '", data_cv,"' , '","' , '", origem_result,"' , '",location_uuid, "' , '"  , patient_uuid ,"' );" )
+      insert_string <- paste0("INSERT INTO ccs_mpi.viral_load (uuid,viral_load_value,viral_load_type,data_cv,origem_result,location_uuid,patient_uuid) VALUES( '", uuid, "' , '" , viral_load_value,"' , '" , viral_load_type,"' , '", data_cv,"' , '", origem_result,"' , '",location_uuid, "' , '"  , patient_uuid ,"' );" )
       
       result <- tryCatch({
         
