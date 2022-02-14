@@ -10,7 +10,7 @@ FROM
             CONCAT(IFNULL(pn.given_name,''),' ',IFNULL(pn.middle_name,''),' ',IFNULL(pn.family_name,'')) AS 'NomeCompleto',
             pn.given_name,
             pn.middle_name,
-			p.gender,
+			      p.gender,
             pn.family_name,
 			DATE_FORMAT(p.birthdate,'%d/%m/%Y') as birthdate ,
             ROUND(DATEDIFF(@endDate,p.birthdate)/365) idade_actual,
@@ -124,6 +124,7 @@ FROM
   FROM obs o inner join concept_name cn on cn.concept_name_id= o.value_coded_name_id
  where o.concept_id=5002 and cn.locale='pt'  and o.voided=0
  ) death ON death.person_id=inicio_real.patient_id
+ 
 /* ******************************* Telefone **************************** */
 	LEFT JOIN (
 		SELECT  p.person_id, p.value  
@@ -143,7 +144,7 @@ left join
 					GROUP BY p.patient_id
 				) ultimavisita
 
-		) visita ON visita.patient_id=inicio_real.patient_id -- and DATEDIFF(@endDate,visita.value_datetime)<= 28
+		) visita ON visita.patient_id=inicio_real.patient_id 
  left join (
 			SELECT 	pg.patient_id		,
 			case ps.state
@@ -238,7 +239,40 @@ sql_query_openmrs_viral_load_info <- "
         and e.location_id=@location  group by encounter_datetime order  by  encounter_datetime desc ) cv 
 "
 
+sql_openmrs_patient_program <- "
 
+			SELECT 	pg.patient_id,
+			case ps.state
+            when 6 then  'ACTIVO NO PROGRAMA'
+            when 7 then  'TRANSFERIDO PARA'
+            when 8 then  'SUSPENSO'
+            when 9 then  'ABANDONO'
+            when 10 then  'OBITOU'
+            when 29 then 'TRANSFERIDO DE'
+            end as estado,
+           --    DATE_FORMAT(ps.start_date,'%Y/%m/%d') as data_inscricao,
+              DATE_FORMAT(pg.date_enrolled,'%Y/%m/%d') as data_admissao,
+              DATE_FORMAT(pg.date_completed,'%Y/%m/%d') as data_fim_tratamento,
+              DATE_FORMAT(ps.end_date ,'%Y/%m/%d')  as data_saida,
+              pg.uuid
+  
+			FROM 	patient p 
+					INNER JOIN patient_program pg ON p.patient_id=pg.patient_id
+					INNER JOIN patient_state ps ON pg.patient_program_id=ps.patient_program_id
+			WHERE 	pg.voided=0 AND ps.voided=0 AND p.voided=0 AND p.patient_id =@patient_id AND
+					pg.program_id=2  AND location_id=@location   order by pg.patient_id, data_admissao desc
+			"
+sql_mpi_patient_program <-"
+SELECT 
+    patient_program.estado,
+    patient_program.data_admissao,
+    patient_program.data_fim_tratamento,
+    patient_program.patient_uuid,
+    patient_program.location_uuid,
+    patient_program.uuid
+FROM ccs_mpi.patient_program 
+where patient_uuid = @patient_id;
+"
 
 sql_query_mpi_drug_pickups <- "
 SELECT drug_pickup.pickup_date,

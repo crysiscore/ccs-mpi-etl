@@ -31,7 +31,7 @@ if(class(con_mpi)[1]=="MySQLConnection"){
     
     load(file = 'data/location.RData')
     
-    for ( k in 3:nrow(location) ) {
+    for ( k in 1:nrow(location) ) {
       
       location_uuid <- location$uuid[k]
       location_id   <- location$location_id[k]
@@ -85,8 +85,8 @@ if(class(con_mpi)[1]=="MySQLConnection"){
             # If process finished sucessfully
             if(i==nrow(patients)){
               after <- Sys.time()
-              elapsed_time <- after -before
-              saveProcessLog(mpi.con = con_mpi,process.date = curr_datetime,process.type = 'Fetch Seguimento info',affected.rows = 0,
+              elapsed_time <- round((after -before)/60,digits = 2)
+              saveProcessLog(mpi.con = con_mpi,process.date = curr_datetime,process.type = 'Fetch drug info',affected.rows = 0,
                              process.status ='Iniated',error.msg = '' ,table = paste0(db_name,'.obs'),location.uuid = location_uuid,elapsed.time=as.character(elapsed_time))
            
               writeLog(file = log_file,msg =paste0("-------------------------------------------------------------------------------------------"))
@@ -95,6 +95,8 @@ if(class(con_mpi)[1]=="MySQLConnection"){
               print(paste0("-------------------------------------------------------------------------------------------"))
               print(paste0("-- Fetch Drug info for DB: ",db_name, " took ", elapsed_time))
               print(paste0("-------------------------------------------------------------------------------------------"))
+              dbDisconnect(conn = con_openmrs)
+              
                }
           
             
@@ -107,6 +109,10 @@ if(class(con_mpi)[1]=="MySQLConnection"){
 
       
     }
+    
+    #  close the connection when finished
+    dbDisconnect(con_mpi)
+    rm(con_mpi)
   }
   
   

@@ -48,6 +48,7 @@ getDbConnection <- function(openmrs.user,openmrs.password,openmrs.db.name, openm
     error_msg <- paste0(Sys.time(), "  MySQL - Nao foi possivel connectar-se a host: ", openmrs.host, '  db:',openmrs.db.name, "...",'user:',openmrs.user, ' passwd: ', openmrs.password)
     writeLog(file = log_file,msg = error_msg)
     writeLog(file = log_file,msg = as.character(cond))
+    print(as.character(cond))
     print(paste0(Sys.time(), "  MySQL - Nao foi possivel connectar-se a host: ", openmrs.host, '  db:',openmrs.db.name, "...",'user:',openmrs.db.name, ' passwd: ', openmrs.password))
     saveErrorLog(mpi.con = con_mpi,process.date = Sys.time(),process.type = 'Get Database Conection',affected.rows = 0,
                    process.status ='Failed',error.msg = as.character(cond)  ,table = openmrs.db.name,location.uuid = openmrs.db.name)
@@ -324,7 +325,12 @@ createSqlQueryGetMPIDConsultas <- function( param.patientid,param.location){
   
 }
 
-
+#' Cria query com parametros de entrada
+#' 
+#' @param openmrs.con objecto de conexao com mysql    
+#' @return sql query
+#' @examples
+#' sql_drug_pickup = createSqlQueryDrugPickup(con_openmrs)
 createSqlQueryGetMPIDViraLoad  <- function( param.patientid,param.location){
   
   sql_tmp <- sql_query_mpi_viral_load_info
@@ -334,6 +340,36 @@ createSqlQueryGetMPIDViraLoad  <- function( param.patientid,param.location){
   
 }
 
+
+#' Cria query com parametros de entrada
+#' 
+#' @param openmrs.con objecto de conexao com mysql    
+#' @return sql query
+#' @examples
+#' sql_drug_pickup = createSqlQueryDrugPickup(con_openmrs)
+createSqlQueryGetOpenMRSPatProgram <- function( param.patientid,param.location){
+  
+  sql_tmp <- sql_openmrs_patient_program
+  sql_tmp <- gsub(x =   sql_tmp, pattern = '@patient_id', replacement = as.character(param.patientid ) )
+  sql_tmp <- gsub(x = sql_tmp,pattern = '@location',replacement =as.character(param.location) )
+  sql_tmp
+  
+}
+
+
+#' Cria query com parametros de entrada
+#' 
+#' @param openmrs.con objecto de conexao com mysql    
+#' @return sql query
+#' @examples
+#' sql_drug_pickup = createSqlQueryDrugPickup(con_openmrs)
+createSqlQueryGetMPIDPatProgram <- function( param.patientid,param.location){
+  
+  sql_tmp <- sql_mpi_patient_program
+  sql_tmp <- gsub(x =   sql_tmp, pattern = '@patient_id', replacement = as.character(param.patientid ) )
+  sql_tmp
+  
+}
 
 #' Create MySQL insert query
 #' 
@@ -467,6 +503,54 @@ UpdateMpiData <- function( df,table.name, con.sql){
         saveErrorLog(mpi.con = con_mpi, process.date = Sys.time(),process.type = 'Insert on table viral_load',affected.rows = 0,
                      process.status ='Failed', error.msg = as.character(cond)  , table = table.name ,location.uuid = location_uuid)
         saveErrorLog(mpi.con = con_mpi, process.date = Sys.time(),process.type = 'Insert on table viral_load',affected.rows = 0,
+                     process.status ='Failed', error.msg = error_msg  , table = table.name ,location.uuid = location_uuid)
+        
+      },
+      warning = function(cond) {
+        writeLog(file = log_file,msg = as.character(cond))
+        # Choose a return value in case of warning
+        print(as.character(cond))
+        
+      },
+      finally = {
+        # NOTE:
+        # Here goes everything that should be executed at the end,
+        
+      })
+      #TODO comment this when running in production
+      #print(result)
+      
+    }
+ }
+ else if(table.name=="patient_program"){
+    
+    for (i in 1:nrow(df)) {
+      
+      estado    <- df$estado[i]
+      data_admissao <- df$data_admissao[i]
+      data_inscricao   <- df$data_inscricao[i]
+      data_fim_tratamento  <- df$data_fim_tratamento[i]
+      patient_uuid   <- df$patient_uuid[i]
+      location_uuid  <- df$location_uuid[i]
+      uuid           <- df$uuid[i]
+      
+      insert_string <- paste0("INSERT INTO ccs_mpi.patient_program (estado, data_admissao,  data_fim_tratamento, patient_uuid, location_uuid, uuid) VALUES( '", estado, "' , '" , data_admissao,"' , '" , data_fim_tratamento,"' , '", patient_uuid,"' , '",location_uuid, "' , '"  , uuid ,"' );" )
+      
+      result <- tryCatch({
+        
+        dbExecute(con.sql, insert_string)
+        
+        
+      },
+      error = function(cond) {
+        error_msg <- paste0(Sys.time(), "  MySQL - Nao foi possivel inserir  o programa  do paciente: ", patient_uuid, '  db:',location_uuid, "...", ' uuid : ', uuid)
+        writeLog(file = log_file,msg = error_msg)
+        writeLog(file = log_file,msg = as.character(cond))
+        print(as.character(cond))
+        print(error_msg)
+        saveErrorLog(mpi.con = con_mpi, process.date = Sys.time(),process.type = 'Insert on table patient program',affected.rows = 0,
+                     process.status ='Failed', error.msg = as.character(cond)  , table = table.name ,location.uuid = location_uuid)
+        saveErrorLog(mpi.con = con_mpi, process.date = Sys.time(),process.type = 'Insert on table patient program',affected.rows = 0,
                      process.status ='Failed', error.msg = error_msg  , table = table.name ,location.uuid = location_uuid)
         
       },

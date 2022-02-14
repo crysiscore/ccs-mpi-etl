@@ -1,4 +1,3 @@
-
 library(RMySQL)
 
 #Set working dir
@@ -15,12 +14,10 @@ close( file( log_file, open="w" ) )
 
 
 # Busca o nome de todas BD openmrs no servidor de backups
-
 vec_db_names <- readLines('data/unidades_sanitarias.txt')
 
 
 # Connect to Master Patient Index
-
 con_mpi <- getDbConnection(openmrs.user = mpi_user,openmrs.password = mpi_password,openmrs.db.name = mpi_db.name,
                            openmrs.host = mpi_host,openmrs.port = mpi_port)
 
@@ -28,7 +25,7 @@ if(class(con_mpi)[1]=="MySQLConnection"){
   
   if(dbIsValid(con_mpi)){
 
-    load(file = 'temp_patients.RData')
+    load(file = 'data/temp_patients.RData')
     # Try connection to openmrs DBs
 
     for (db in vec_db_names) {
@@ -48,44 +45,49 @@ if(class(con_mpi)[1]=="MySQLConnection"){
             location_uuid <- location$uuid[1]
             # Get Patient data
             sql_query_openmrs_patients  <- createSqlQueryPatient(param.location = location_id,param.end.date = curr_date)
-            sql_query_mpi_patients  <- createSqlQueryPatientMpi(param.location = location_uuid)
+            #TODO - remove later
+            #sql_query_mpi_patients  <- createSqlQueryPatientMpi(param.location = location_uuid)
             patients_openmrs    <- getOpenmrsData(con.openmrs = con_openmrs,query = sql_query_openmrs_patients)
-            patients_mpi        <- getMasterPatientIndexData(con.openmrs = con_mpi, query = sql_query_mpi_patients)
+            #TODO - remove later
+            #patients_mpi        <- getMasterPatientIndexData(con.openmrs = con_mpi, query = sql_query_mpi_patients)
             
             
         
-            if(nrow(patients) > 0){
-              patients$NomeCompleto    <- removeSpecialCharacters(patients$NomeCompleto)
-              patients$given_name      <- removeSpecialCharacters(patients$given_name)
-              patients$middle_name     <- removeSpecialCharacters(patients$middle_name)
-              patients$family_name     <- removeSpecialCharacters(patients$family_name)
-              patients$Bairro          <- removeSpecialCharacters(patients$Bairro)
-              patients$PontoReferencia <- removeSpecialCharacters(patients$PontoReferencia)
-              patients$telefone        <- removeSpecialCharacters(patients$telefone)
-              patients$Padministrativo <- removeSpecialCharacters(patients$Padministrativo)
-              patients$Distrito        <- removeSpecialCharacters(patients$Distrito)
-              patients$Localidade      <- removeSpecialCharacters(patients$Localidade)
-              # patients$birthdate     <- as.Date(temp_patients$birthdate, "%d/%m/%Y")
-              # patients$death_date    <- as.Date(temp_patients$death_date, "%d/%m/%Y")
-              # patients$data_inicio   <- as.Date(temp_patients$data_inicio, "%d/%m/%Y")
-              patients$location <- location_uuid
-              assign(paste0("patients_", db), patients)
+            if(nrow(patients_openmrs) > 0){
+              patients_openmrs$NomeCompleto    <- removeSpecialCharacters(patients_openmrs$NomeCompleto)
+              patients_openmrs$given_name      <- removeSpecialCharacters(patients_openmrs$given_name)
+              patients_openmrs$middle_name     <- removeSpecialCharacters(patients_openmrs$middle_name)
+              patients_openmrs$family_name     <- removeSpecialCharacters(patients_openmrs$family_name)
+              patients_openmrs$Bairro          <- removeSpecialCharacters(patients_openmrs$Bairro)
+              patients_openmrs$PontoReferencia <- removeSpecialCharacters(patients_openmrs$PontoReferencia)
+              patients_openmrs$telefone        <- removeSpecialCharacters(patients_openmrs$telefone)
+              patients_openmrs$Padministrativo <- removeSpecialCharacters(patients_openmrs$Padministrativo)
+              patients_openmrs$Distrito        <- removeSpecialCharacters(patients_openmrs$Distrito)
+              patients_openmrs$Localidade      <- removeSpecialCharacters(patients_openmrs$Localidade)
+              # patients_openmrs$birthdate     <- as.Date(temp_patients_openmrs$birthdate, "%d/%m/%Y")
+              # patients_openmrs$death_date    <- as.Date(temp_patients_openmrs$death_date, "%d/%m/%Y")
+              # patients_openmrs$data_inicio   <- as.Date(temp_patients_openmrs$data_inicio, "%d/%m/%Y")
+              patients_openmrs$location <- location_uuid
+              assign(paste0("patients_", db), patients_openmrs)
               temp_patients <- plyr::rbind.fill(temp_patients,get(paste0("patients_", db)))
-              rm(patients)
+              rm(patients_openmrs)
               
             } else {
               # Error getting patient data
               writeLog(file = log_file,msg = paste0(Sys.time()," ",db, "- Error  getting patient data, skipping ...."))
-              saveProcessLog(mpi.con = con_mpi,process.date = curr_datetime,process.type = 'Load Patient Data',affected.rows = 0,
+              saveErrorLog(mpi.con = con_mpi,process.date = curr_datetime,process.type = 'Load Patient Data',affected.rows = 0,
                              process.status ='Failed',error.msg = 'Unknown' ,table = 'patient',location.uuid = location_uuid)
+              print(paste0(Sys.time()," ",db, "- Error  getting patient data, skipping ...."))
             }
  
             
           } else {
             
             writeLog(file = log_file,msg = paste0(Sys.time()," ", db," - Unable to get location info from table Location, aborting ...."))
-            saveErrorLogLog(mpi.con = con_mpi,process.date = curr_datetime,process.type = 'get location info',affected.rows = 0,
-                           process.status ='Failed',error.msg = 'Unable to get location info from table Location, aborting' ,table = 'location',location.uuid = db)
+            saveErrorLog( mpi.con = con_mpi,process.date = curr_datetime,process.type = 'get location info',affected.rows = 0,
+                           process.status ='Failed', error.msg = 'Unable to get location info from table Location, aborting' ,
+                           table = 'location',location.uuid = db )
+            print(paste0(Sys.time()," ", db," - Unable to get location info from table Location, aborting ...."))
             
           }
           dbDisconnect(con_openmrs)
@@ -100,7 +102,8 @@ if(class(con_mpi)[1]=="MySQLConnection"){
     }
     #  dbWriteTable(conn = con_mpi, name = 'temp_patients', value = temp_patients , row.names = F, append = F)
     #  dbGetQuery(mydb, "insert into table select * from temp_table")
-    
+    dbDisconnect(con_mpi)
+    rm(con_mpi) 
   }
   } else{
   
@@ -108,4 +111,6 @@ if(class(con_mpi)[1]=="MySQLConnection"){
   # Do nothing
   
   
-}
+  }
+
+

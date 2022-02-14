@@ -11,7 +11,7 @@ source('sql_queries.R')
 
 
 # clear log file
-log_file <- 'log_file_viral_load.txt'
+log_file <- 'log_file_patient_program.txt'
 close( file( log_file, open="w" ) )
 curr_date <- Sys.Date()
 curr_datetime <-Sys.time()
@@ -51,24 +51,24 @@ if(class(con_mpi)[1]=="MySQLConnection"){
             
             for (i in 1:nrow(patients)) {
               
-              sql_openmrs_patient_carga_viral  <- createSqlQueryGetOpenMRSViraLoad(param.patientid = patients$patientid[i],param.location =location_id )
-              sql_mpi_patient_carga_viral      <- createSqlQueryGetMPIDViraLoad(param.patientid = patients$patientid[i],param.location =location_id )
-              df_mpi_patient_carga_viral       <- getMasterPatientIndexData(con.openmrs = con_mpi ,query = sql_mpi_patient_carga_viral )
-              df_openmrs_patient_carga_viral   <- getOpenmrsData(con.openmrs = con_openmrs ,query = sql_openmrs_patient_carga_viral )
+              sql_openmrs_patient_program  <- createSqlQueryGetOpenMRSPatProgram(param.patientid = patients$patientid[i],param.location =location_id )
+              sql_mpi_patient_program      <- createSqlQueryGetMPIDPatProgram(param.patientid = patients$patientid[i],param.location =location_id )
+              df_mpi_patient_program       <- getMasterPatientIndexData(con.openmrs = con_mpi ,query = sql_mpi_patient_program )
+              df_openmrs_patient_program   <- getOpenmrsData(con.openmrs = con_openmrs ,query = sql_openmrs_patient_program )
           
-                if(nrow(df_openmrs_patient_carga_viral) >0 ) {
-                  df_openmrs_patient_carga_viral$location_uuid <- location_uuid
-                  df_openmrs_patient_carga_viral$patient_uuid <- patients$uuid[i]
-                  df_openmrs_patient_carga_viral[is.na(df_openmrs_patient_carga_viral)] <- "2000/01/01"
+                if(nrow(df_openmrs_patient_program) >0 ) {
+                  df_openmrs_patient_program$location_uuid <- location_uuid
+                  df_openmrs_patient_program$patient_uuid <- patients$uuid[i]
+                  df_openmrs_patient_program[is.na(df_openmrs_patient_program)] <- "2000/01/01"
                 
-                df_update_viral_load <-  left_join(x = df_openmrs_patient_carga_viral,y = df_mpi_patient_carga_viral, by="uuid" ) %>%   
-                  select("uuid","viral_load_value.x","viral_load_type.x","data_cv.x","origem_result.x","location_uuid.x","patient_uuid.x") %>% 
-                  rename(viral_load_value=viral_load_value.x,viral_load_type=viral_load_type.x , origem_result=origem_result.x,data_cv=data_cv.x,
+                df_update_patient_program <-  left_join(x = df_openmrs_patient_program,y = df_mpi_patient_program, by="uuid" ) %>%   
+                  select("estado.x","data_admissao.x","data_fim_tratamento.x","location_uuid.x","patient_uuid.x","uuid") %>% 
+                  rename(estado=estado.x,data_admissao=data_admissao.x , data_fim_tratamento=data_fim_tratamento.x,
                          location_uuid=location_uuid.x,patient_uuid=patient_uuid.x)
-                if(nrow(df_update_viral_load)> 0){
+                if(nrow(df_update_patient_program)> 0){
                   
                   
-                  UpdateMpiData(df = df_update_viral_load,table.name = "viral_load",con.sql = con_mpi)
+                  UpdateMpiData(df = df_update_patient_program,table.name = "patient_program",con.sql = con_mpi)
                   
                   
                 }
@@ -86,14 +86,14 @@ if(class(con_mpi)[1]=="MySQLConnection"){
             if(i==nrow(patients)){
               after <- Sys.time()
               elapsed_time <- round((after -before)/60,digits = 2)
-              saveProcessLog(mpi.con = con_mpi,process.date = curr_datetime,process.type = 'Fetch Viral load info',affected.rows = 0,
+              saveProcessLog(mpi.con = con_mpi,process.date = curr_datetime,process.type = 'Fetch patient program info',affected.rows = 0,
                              process.status ='Iniated',error.msg = '' ,table = paste0(db_name,'.obs'),location.uuid = location_uuid,elapsed.time=as.character(elapsed_time))
               
               writeLog(file = log_file,msg =paste0("-------------------------------------------------------------------------------------------"))
-              writeLog(file = log_file,msg =paste0("-- Fetch viral load info for DB: ", db_name, " took ", elapsed_time))
+              writeLog(file = log_file,msg =paste0("-- Fetch patient program info for DB: ", db_name, " took ", elapsed_time))
               writeLog(file = log_file,msg =paste0("-------------------------------------------------------------------------------------------"))
               print(paste0("-------------------------------------------------------------------------------------------"))
-              print(paste0("-- Fetch viral load info for DB: ",db_name, " took ", elapsed_time))
+              print(paste0("-- Fetch patient program info for DB: ",db_name, " took ", elapsed_time))
               print(paste0("-------------------------------------------------------------------------------------------"))
               dbDisconnect(conn = con_openmrs)
               rm(con_openmrs)

@@ -84,16 +84,19 @@ if(class(con_mpi)[1]=="MySQLConnection"){
             # If process finished sucessfully
             if(i==nrow(patients)){
               after <- Sys.time()
-              elapsed_time <- after -before
+              elapsed_time <- round((after -before)/60,digits = 2)
               saveProcessLog(mpi.con = con_mpi,process.date = curr_datetime,process.type = 'Fetch Seguimento info',affected.rows = 0,
                              process.status ='Iniated',error.msg = '' ,table = paste0(db_name,'.obs'),location.uuid = location_uuid,elapsed.time=as.character(elapsed_time))
               
               writeLog(file = log_file,msg =paste0("-------------------------------------------------------------------------------------------"))
-              writeLog(file = log_file,msg =paste0("-- Fetch Drug info for DB: ", db_name, " took ", elapsed_time))
+              writeLog(file = log_file,msg =paste0("-- Fetch Seguimento info for DB: ", db_name, " took ", elapsed_time))
               writeLog(file = log_file,msg =paste0("-------------------------------------------------------------------------------------------"))
               print(paste0("-------------------------------------------------------------------------------------------"))
-              print(paste0("-- Fetch Drug info for DB: ",db_name, " took ", elapsed_time))
+              print(paste0("-- Fetch Seguimento info for DB: ",db_name, " took ", elapsed_time))
               print(paste0("-------------------------------------------------------------------------------------------"))
+              dbDisconnect(conn = con_openmrs)
+              rm(con_openmrs)
+              
               }
 
           }
@@ -105,6 +108,10 @@ if(class(con_mpi)[1]=="MySQLConnection"){
 
       
     }
+    
+    #  close the connection when finished
+    dbDisconnect(con_mpi)
+    rm(con_mpi)
   }
   
   

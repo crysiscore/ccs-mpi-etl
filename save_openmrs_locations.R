@@ -1,4 +1,5 @@
 library(RMySQL)
+
 #Set working dir
 wd <- '/home/agnaldo/Git/ccs-mpi-etl'
 setwd(wd)
@@ -98,7 +99,7 @@ if(class(con_mpi)[1]=="MySQLConnection"){
   }
   
   
-} else{
+} else {
   
   # Connection failed. Log has already been written
   # Do nothing
