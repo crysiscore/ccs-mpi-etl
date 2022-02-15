@@ -9,7 +9,7 @@ source('sql_queries.R')
 
 
 # clear log file
-log_file <- 'patient_log_file.txt'
+log_file <- 'logs/patient_log_file.txt'
 close( file( log_file, open="w" ) )
 
 
@@ -72,7 +72,8 @@ if(class(con_mpi)[1]=="MySQLConnection"){
               temp_patients <- plyr::rbind.fill(temp_patients,get(paste0("patients_", db)))
               rm(patients_openmrs)
               
-            } else {
+            }
+            else {
               # Error getting patient data
               writeLog(file = log_file,msg = paste0(Sys.time()," ",db, "- Error  getting patient data, skipping ...."))
               saveErrorLog(mpi.con = con_mpi,process.date = curr_datetime,process.type = 'Load Patient Data',affected.rows = 0,
@@ -81,7 +82,8 @@ if(class(con_mpi)[1]=="MySQLConnection"){
             }
  
             
-          } else {
+          }
+          else {
             
             writeLog(file = log_file,msg = paste0(Sys.time()," ", db," - Unable to get location info from table Location, aborting ...."))
             saveErrorLog( mpi.con = con_mpi,process.date = curr_datetime,process.type = 'get location info',affected.rows = 0,
@@ -90,6 +92,7 @@ if(class(con_mpi)[1]=="MySQLConnection"){
             print(paste0(Sys.time()," ", db," - Unable to get location info from table Location, aborting ...."))
             
           }
+          
           dbDisconnect(con_openmrs)
           rm(con_openmrs)
    
@@ -99,9 +102,22 @@ if(class(con_mpi)[1]=="MySQLConnection"){
        }
       
       
+      
     }
-    #  dbWriteTable(conn = con_mpi, name = 'temp_patients', value = temp_patients , row.names = F, append = F)
-    #  dbGetQuery(mydb, "insert into table select * from temp_table")
+    if(nrow(temp_patients)> 0){
+      
+      #dbSendQuery(conn = con_mpi,statement = "ALTER TABLE patient ADD PRIMARY KEY (patientid, uuid); ")
+      dbGetQuery(conn = con_mpi, "drop table if exists temp_patients; ")
+      dbSendQuery(conn = con_mpi,statement = "SET GLOBAL local_infile=1;")
+      status = dbWriteTable(conn = con_mpi, name = 'temp_patients', value = temp_patients , row.names = F, append = F)
+      if(status){
+       
+         dbGetQuery(conn = con_mpi,statement = sql_post_insert_patient)
+      }
+      
+      
+    }
+
     dbDisconnect(con_mpi)
     rm(con_mpi) 
   }

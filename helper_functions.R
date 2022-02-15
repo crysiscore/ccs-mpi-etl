@@ -260,10 +260,10 @@ getMasterPatientIndexData <- function(con.openmrs, query) {
 #' @return sql query
 #' @examples
 #' sql_drug_pickup = createSqlQueryDrugPickup(con_openmrs)
-createSqlQueryGetOpenMRSDrugPickups <- function( param.patientid,param.location){
+createSqlQueryGetOpenMRSDrugPickups <- function(param.location){
   
   sql_tmp <- sql_query_openmrs_levant_info
-  sql_tmp <- gsub(x =   sql_tmp, pattern = '@patient_id', replacement = as.character(param.patientid ) )
+  #sql_tmp <- gsub(x =   sql_tmp, pattern = '@patient_id', replacement = as.character(param.patientid ) )
   sql_tmp <- gsub(x = sql_tmp,pattern = '@location',replacement =as.character(param.location) )
   sql_tmp
   
@@ -275,19 +275,19 @@ createSqlQueryGetOpenMRSDrugPickups <- function( param.patientid,param.location)
 #' @return sql query
 #' @examples
 #' sql_drug_pickup = createSqlQueryDrugPickup(con_openmrs)
-createSqlQueryGetOpenMRSConsultas <- function( param.patientid,param.location){
+createSqlQueryGetOpenMRSConsultas <- function( param.location){
   
   sql_tmp <- sql_query_openmrs_consulta_info
-  sql_tmp <- gsub(x =   sql_tmp, pattern = '@patient_id', replacement = as.character(param.patientid ) )
+  #sql_tmp <- gsub(x =   sql_tmp, pattern = '@patient_id', replacement = as.character(param.patientid ) )
   sql_tmp <- gsub(x = sql_tmp,pattern = '@location',replacement =as.character(param.location) )
   sql_tmp
   
 }
 
-createSqlQueryGetOpenMRSViraLoad <- function( param.patientid,param.location){
+createSqlQueryGetOpenMRSViraLoad <- function( param.location){
   
   sql_tmp <- sql_query_openmrs_viral_load_info
-  sql_tmp <- gsub(x =   sql_tmp, pattern = '@patient_id', replacement = as.character(param.patientid ) )
+  #sql_tmp <- gsub(x =   sql_tmp, pattern = '@patient_id', replacement = as.character(param.patientid ) )
   sql_tmp <- gsub(x = sql_tmp,pattern = '@location',replacement =as.character(param.location) )
   sql_tmp
   
@@ -347,10 +347,10 @@ createSqlQueryGetMPIDViraLoad  <- function( param.patientid,param.location){
 #' @return sql query
 #' @examples
 #' sql_drug_pickup = createSqlQueryDrugPickup(con_openmrs)
-createSqlQueryGetOpenMRSPatProgram <- function( param.patientid,param.location){
+createSqlQueryGetOpenMRSPatProgram <- function(param.location){
   
   sql_tmp <- sql_openmrs_patient_program
-  sql_tmp <- gsub(x =   sql_tmp, pattern = '@patient_id', replacement = as.character(param.patientid ) )
+  #sql_tmp <- gsub(x =   sql_tmp, pattern = '@patient_id', replacement = as.character(param.patientid ) )
   sql_tmp <- gsub(x = sql_tmp,pattern = '@location',replacement =as.character(param.location) )
   sql_tmp
   
@@ -401,12 +401,10 @@ UpdateMpiData <- function( df,table.name, con.sql){
         error_msg <- paste0(Sys.time(), "  MySQL - Nao foi possivel inserir  a info. de levantamento do paciente: ", patient_uuid, '  db:',location_uuid, "...",'data:',pickup_date, ' uuid : ', uuid)
         writeLog(file = log_file,msg = error_msg)
         writeLog(file = log_file,msg = as.character(cond))
-        print(as.character(cond))
-        print(error_msg)
-        saveErrorLog(mpi.con = con_mpi, process.date = Sys.time(),process.type = 'Insert on table drug_pickup ',affected.rows = 0,
-                       process.status ='Failed',error.msg = as.character(cond)  , table = table.name ,location.uuid = location_uuid)
-        saveErrorLog(mpi.con = con_mpi, process.date = Sys.time(),process.type = 'Insert on table patient_visit',affected.rows = 0,
-                     process.status ='Failed', error.msg = error_msg  , table = table.name ,location.uuid = location_uuid)
+        # saveErrorLog(mpi.con = con_mpi, process.date = Sys.time(),process.type = 'Insert on table drug_pickup ',affected.rows = 0,
+        #               process.status ='Failed',error.msg = as.character(cond)  , table = table.name ,location.uuid = location_uuid)
+        #saveErrorLog(mpi.con = con_mpi, process.date = Sys.time(),process.type = 'Insert on table drug_pickup',affected.rows = 0,
+        #             process.status ='Failed', error.msg = error_msg  , table = table.name ,location.uuid = location_uuid)
       },
       warning = function(cond) {
         writeLog(file = log_file,msg = as.character(cond))
@@ -450,12 +448,13 @@ UpdateMpiData <- function( df,table.name, con.sql){
        error_msg <- paste0(Sys.time(), "  MySQL - Nao foi possivel inserir  o seguimento de levantamento do paciente: ", patient_uuid, '  db:',location_uuid, "...",'data:',date_visit, ' uuid : ', uuid)
        writeLog(file = log_file,msg = error_msg)
        writeLog(file = log_file,msg = as.character(cond))
-       print(as.character(cond))
-       print(error_msg)
-       saveErrorLog(mpi.con = con_mpi, process.date = Sys.time(),process.type = 'Insert on table patient_visit',affected.rows = 0,
-                      process.status ='Failed', error.msg = as.character(cond)  , table = table.name ,location.uuid = location_uuid)
-       saveErrorLog(mpi.con = con_mpi, process.date = Sys.time(),process.type = 'Insert on table patient_visit',affected.rows = 0,
-                    process.status ='Failed', error.msg = error_msg  , table = table.name ,location.uuid = location_uuid)
+       #print(as.character(cond))
+       #print(error_msg)
+       #saveErrorLog(mpi.con = con_mpi, process.date = Sys.time(),process.type = 'Insert on table patient_visit',affected.rows = 0,
+       #                process.status ='Failed', error.msg = as.character(cond)  , table = table.name ,location.uuid = location_uuid)
+       
+       #saveErrorLog(mpi.con = con_mpi, process.date = Sys.time(),process.type = 'Insert on table patient_visit',affected.rows = 0,
+       #              process.status ='Failed', error.msg = error_msg  , table = table.name ,location.uuid = location_uuid)
        
      },
      warning = function(cond) {
@@ -498,12 +497,11 @@ UpdateMpiData <- function( df,table.name, con.sql){
         error_msg <- paste0(Sys.time(), "  MySQL - Nao foi possivel inserir  a carga virla do paciente: ", patient_uuid, '  db:',location_uuid, "...", ' uuid : ', uuid)
         writeLog(file = log_file,msg = error_msg)
         writeLog(file = log_file,msg = as.character(cond))
-        print(as.character(cond))
-        print(error_msg)
-        saveErrorLog(mpi.con = con_mpi, process.date = Sys.time(),process.type = 'Insert on table viral_load',affected.rows = 0,
-                     process.status ='Failed', error.msg = as.character(cond)  , table = table.name ,location.uuid = location_uuid)
-        saveErrorLog(mpi.con = con_mpi, process.date = Sys.time(),process.type = 'Insert on table viral_load',affected.rows = 0,
-                     process.status ='Failed', error.msg = error_msg  , table = table.name ,location.uuid = location_uuid)
+      
+        # saveErrorLog(mpi.con = con_mpi, process.date = Sys.time(),process.type = 'Insert on table viral_load',affected.rows = 0,
+        #              process.status ='Failed', error.msg = as.character(cond)  , table = table.name ,location.uuid = location_uuid)
+        # saveErrorLog(mpi.con = con_mpi, process.date = Sys.time(),process.type = 'Insert on table viral_load',affected.rows = 0,
+        #              process.status ='Failed', error.msg = error_msg  , table = table.name ,location.uuid = location_uuid)
         
       },
       warning = function(cond) {
@@ -546,12 +544,11 @@ UpdateMpiData <- function( df,table.name, con.sql){
         error_msg <- paste0(Sys.time(), "  MySQL - Nao foi possivel inserir  o programa  do paciente: ", patient_uuid, '  db:',location_uuid, "...", ' uuid : ', uuid)
         writeLog(file = log_file,msg = error_msg)
         writeLog(file = log_file,msg = as.character(cond))
-        print(as.character(cond))
-        print(error_msg)
-        saveErrorLog(mpi.con = con_mpi, process.date = Sys.time(),process.type = 'Insert on table patient program',affected.rows = 0,
-                     process.status ='Failed', error.msg = as.character(cond)  , table = table.name ,location.uuid = location_uuid)
-        saveErrorLog(mpi.con = con_mpi, process.date = Sys.time(),process.type = 'Insert on table patient program',affected.rows = 0,
-                     process.status ='Failed', error.msg = error_msg  , table = table.name ,location.uuid = location_uuid)
+       
+        # saveErrorLog(mpi.con = con_mpi, process.date = Sys.time(),process.type = 'Insert on table patient program',affected.rows = 0,
+        #              process.status ='Failed', error.msg = as.character(cond)  , table = table.name ,location.uuid = location_uuid)
+        # saveErrorLog(mpi.con = con_mpi, process.date = Sys.time(),process.type = 'Insert on table patient program',affected.rows = 0,
+        #              process.status ='Failed', error.msg = error_msg  , table = table.name ,location.uuid = location_uuid)
         
       },
       warning = function(cond) {

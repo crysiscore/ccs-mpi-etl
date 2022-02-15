@@ -11,7 +11,7 @@ source('sql_queries.R')
 
 
 # clear log file
-log_file <- 'log_file_patient_program.txt'
+log_file <- 'logs/log_file_patient_program.txt'
 close( file( log_file, open="w" ) )
 curr_date <- Sys.Date()
 curr_datetime <-Sys.time()
@@ -36,59 +36,31 @@ if(class(con_mpi)[1]=="MySQLConnection"){
       location_uuid <- location$uuid[k]
       location_id   <- location$location_id[k]
       db_name       <- location$db_name[k]
-      patients      <- getMasterPatientIndexData(con.openmrs = con_mpi,query = paste0("select patientid,uuid ,location_uuid from patient where location_uuid='",location_uuid,"' ;") )
-      
+ 
       con_openmrs <- getDbConnection(openmrs.user = openmrs_user,openmrs.password = openmrs_password,openmrs.db.name = db_name,
                                      openmrs.host = openmrs_host,openmrs.port = openmrs_port )
       
       if(class(con_openmrs)[1]=="MySQLConnection"){
         if(dbIsValid(con_openmrs)){
           
-          if(nrow(patients)>0){
-            
-            
+
             before <-  Sys.time()
+            sql_openmrs_patient_program  <- createSqlQueryGetOpenMRSPatProgram(param.location =location_id )
+            df_openmrs_patient_program   <- getOpenmrsData(con.openmrs = con_openmrs ,query = sql_openmrs_patient_program )
             
-            for (i in 1:nrow(patients)) {
+            if(nrow(df_openmrs_patient_program) >0 ) {
               
-              sql_openmrs_patient_program  <- createSqlQueryGetOpenMRSPatProgram(param.patientid = patients$patientid[i],param.location =location_id )
-              sql_mpi_patient_program      <- createSqlQueryGetMPIDPatProgram(param.patientid = patients$patientid[i],param.location =location_id )
-              df_mpi_patient_program       <- getMasterPatientIndexData(con.openmrs = con_mpi ,query = sql_mpi_patient_program )
-              df_openmrs_patient_program   <- getOpenmrsData(con.openmrs = con_openmrs ,query = sql_openmrs_patient_program )
-          
-                if(nrow(df_openmrs_patient_program) >0 ) {
-                  df_openmrs_patient_program$location_uuid <- location_uuid
-                  df_openmrs_patient_program$patient_uuid <- patients$uuid[i]
-                  df_openmrs_patient_program[is.na(df_openmrs_patient_program)] <- "2000/01/01"
-                
-                df_update_patient_program <-  left_join(x = df_openmrs_patient_program,y = df_mpi_patient_program, by="uuid" ) %>%   
-                  select("estado.x","data_admissao.x","data_fim_tratamento.x","location_uuid.x","patient_uuid.x","uuid") %>% 
-                  rename(estado=estado.x,data_admissao=data_admissao.x , data_fim_tratamento=data_fim_tratamento.x,
-                         location_uuid=location_uuid.x,patient_uuid=patient_uuid.x)
-                if(nrow(df_update_patient_program)> 0){
-                  
-                  
-                  UpdateMpiData(df = df_update_patient_program,table.name = "patient_program",con.sql = con_mpi)
-                  
-                  
-                }
-                
-                
-                
-              }
-            
+              df_openmrs_patient_program$location_uuid <- location_uuid
+              df_openmrs_patient_program[is.na(df_openmrs_patient_program)] <- "2000/01/01"
+              UpdateMpiData(df = df_update_patient_program,table.name = "patient_program",con.sql = con_mpi)
               
-              
-              
-            } 
-            
-            # If process finished sucessfully
-            if(i==nrow(patients)){
+                # If process finished sucessfully
+                
               after <- Sys.time()
               elapsed_time <- round((after -before)/60,digits = 2)
               saveProcessLog(mpi.con = con_mpi,process.date = curr_datetime,process.type = 'Fetch patient program info',affected.rows = 0,
-                             process.status ='Iniated',error.msg = '' ,table = paste0(db_name,'.obs'),location.uuid = location_uuid,elapsed.time=as.character(elapsed_time))
-              
+                               process.status ='Finished',error.msg = '' ,table = paste0(db_name,'.obs'),location.uuid = location_uuid,elapsed.time=as.character(elapsed_time))
+                
               writeLog(file = log_file,msg =paste0("-------------------------------------------------------------------------------------------"))
               writeLog(file = log_file,msg =paste0("-- Fetch patient program info for DB: ", db_name, " took ", elapsed_time))
               writeLog(file = log_file,msg =paste0("-------------------------------------------------------------------------------------------"))
@@ -97,9 +69,11 @@ if(class(con_mpi)[1]=="MySQLConnection"){
               print(paste0("-------------------------------------------------------------------------------------------"))
               dbDisconnect(conn = con_openmrs)
               rm(con_openmrs)
+                
               
-              }
 
+            } 
+            
           }
           
           
@@ -113,7 +87,4 @@ if(class(con_mpi)[1]=="MySQLConnection"){
     #  close the connection when finished
     dbDisconnect(con_mpi)
     rm(con_mpi)
-  }
-  
-  
   }

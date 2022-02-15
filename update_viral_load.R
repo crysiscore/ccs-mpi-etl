@@ -11,7 +11,7 @@ source('sql_queries.R')
 
 
 # clear log file
-log_file <- 'log_file_viral_load.txt'
+log_file <- 'logs/log_file_viral_load.txt'
 close( file( log_file, open="w" ) )
 curr_date <- Sys.Date()
 curr_datetime <-Sys.time()
@@ -36,73 +36,42 @@ if(class(con_mpi)[1]=="MySQLConnection"){
       location_uuid <- location$uuid[k]
       location_id   <- location$location_id[k]
       db_name       <- location$db_name[k]
-      patients      <- getMasterPatientIndexData(con.openmrs = con_mpi,query = paste0("select patientid,uuid ,location_uuid from patient where location_uuid='",location_uuid,"' ;") )
+      #patients      <- getMasterPatientIndexData(con.openmrs = con_mpi,query = paste0("select patientid,uuid ,location_uuid from patient where location_uuid='",location_uuid,"' ;") )
       
       con_openmrs <- getDbConnection(openmrs.user = openmrs_user,openmrs.password = openmrs_password,openmrs.db.name = db_name,
                                      openmrs.host = openmrs_host,openmrs.port = openmrs_port )
       
       if(class(con_openmrs)[1]=="MySQLConnection"){
         if(dbIsValid(con_openmrs)){
-          
-          if(nrow(patients)>0){
-            
-            
-            before <-  Sys.time()
-            
-            for (i in 1:nrow(patients)) {
-              
-              sql_openmrs_patient_carga_viral  <- createSqlQueryGetOpenMRSViraLoad(param.patientid = patients$patientid[i],param.location =location_id )
-              sql_mpi_patient_carga_viral      <- createSqlQueryGetMPIDViraLoad(param.patientid = patients$patientid[i],param.location =location_id )
-              df_mpi_patient_carga_viral       <- getMasterPatientIndexData(con.openmrs = con_mpi ,query = sql_mpi_patient_carga_viral )
-              df_openmrs_patient_carga_viral   <- getOpenmrsData(con.openmrs = con_openmrs ,query = sql_openmrs_patient_carga_viral )
-          
-                if(nrow(df_openmrs_patient_carga_viral) >0 ) {
+          before <-  Sys.time()
+          sql_openmrs_patient_carga_viral  <- createSqlQueryGetOpenMRSViraLoad(param.location =location_id )
+          df_openmrs_patient_carga_viral   <- getOpenmrsData(con.openmrs = con_openmrs ,query = sql_openmrs_patient_carga_viral )
+          if(nrow(df_openmrs_patient_carga_viral) >0 ) {
+                  
                   df_openmrs_patient_carga_viral$location_uuid <- location_uuid
-                  df_openmrs_patient_carga_viral$patient_uuid <- patients$uuid[i]
+    
                   df_openmrs_patient_carga_viral[is.na(df_openmrs_patient_carga_viral)] <- "2000/01/01"
-                
-                df_update_viral_load <-  left_join(x = df_openmrs_patient_carga_viral,y = df_mpi_patient_carga_viral, by="uuid" ) %>%   
-                  select("uuid","viral_load_value.x","viral_load_type.x","data_cv.x","origem_result.x","location_uuid.x","patient_uuid.x") %>% 
-                  rename(viral_load_value=viral_load_value.x,viral_load_type=viral_load_type.x , origem_result=origem_result.x,data_cv=data_cv.x,
-                         location_uuid=location_uuid.x,patient_uuid=patient_uuid.x)
-                if(nrow(df_update_viral_load)> 0){
+              
+                  dbGetQuery(conn = con_mpi, statement = paste0("delete from viral_load where location_uuid = '",location_uuid,"' ;"))    
+                 
+                   UpdateMpiData(df = df_openmrs_patient_carga_viral,table.name = "viral_load",con.sql = con_mpi)
                   
+                # If process finished sucessfully
+     
+                  after <- Sys.time()
+                  elapsed_time <- round((after -before)/60,digits = 2)
+                  saveProcessLog(mpi.con = con_mpi,process.date = curr_datetime,process.type = 'Fetch Viral load info',affected.rows = 0,
+                                 process.status ='Finished',error.msg = '' ,table = paste0(db_name,'.obs'),location.uuid = location_uuid,elapsed.time=as.character(elapsed_time))
                   
-                  UpdateMpiData(df = df_update_viral_load,table.name = "viral_load",con.sql = con_mpi)
-                  
-                  
-                }
-                
-                
-                
-              }
-            
-              
-              
-              
-            } 
-            
-            # If process finished sucessfully
-            if(i==nrow(patients)){
-              after <- Sys.time()
-              elapsed_time <- round((after -before)/60,digits = 2)
-              saveProcessLog(mpi.con = con_mpi,process.date = curr_datetime,process.type = 'Fetch Viral load info',affected.rows = 0,
-                             process.status ='Iniated',error.msg = '' ,table = paste0(db_name,'.obs'),location.uuid = location_uuid,elapsed.time=as.character(elapsed_time))
-              
-              writeLog(file = log_file,msg =paste0("-------------------------------------------------------------------------------------------"))
-              writeLog(file = log_file,msg =paste0("-- Fetch viral load info for DB: ", db_name, " took ", elapsed_time))
-              writeLog(file = log_file,msg =paste0("-------------------------------------------------------------------------------------------"))
-              print(paste0("-------------------------------------------------------------------------------------------"))
-              print(paste0("-- Fetch viral load info for DB: ",db_name, " took ", elapsed_time))
-              print(paste0("-------------------------------------------------------------------------------------------"))
-              dbDisconnect(conn = con_openmrs)
-              rm(con_openmrs)
-              
-              }
+                  writeLog(file = log_file,msg =paste0("-------------------------------------------------------------------------------------------"))
+                  writeLog(file = log_file,msg =paste0("-- Fetch viral load info for DB: ", db_name, " took ", elapsed_time))
+                  writeLog(file = log_file,msg =paste0("-------------------------------------------------------------------------------------------"))
+                  print(paste0("-------------------------------------------------------------------------------------------"))
+                  print(paste0("-- Fetch viral load info for DB: ",db_name, " took ", elapsed_time))
+                  print(paste0("-------------------------------------------------------------------------------------------"))
+                  dbDisconnect(conn = con_openmrs)
+                  rm(con_openmrs)
 
-          }
-          
-          
           
         }
       }
@@ -111,9 +80,13 @@ if(class(con_mpi)[1]=="MySQLConnection"){
     }
     
     #  close the connection when finished
+
+    }
+    
     dbDisconnect(con_mpi)
     rm(con_mpi)
-  }
   
   
   }
+  
+}

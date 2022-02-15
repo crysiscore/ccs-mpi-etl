@@ -33,7 +33,7 @@ FROM
 		FROM
 			(	
 			
-				/*Patients on ART who initiated the ARV DRUGS: ART Regimen Start Date*/
+					/*Patients on ART who initiated the ARV DRUGS: ART Regimen Start Date*/
 				
 						SELECT 	p.patient_id,MIN(e.encounter_datetime) data_inicio
 						FROM 	patient p 
@@ -73,13 +73,10 @@ FROM
 									INNER JOIN encounter e ON p.patient_id=e.patient_id
 						  WHERE		p.voided=0 AND e.encounter_type=18 AND e.voided=0 AND e.encounter_datetime<=@endDate AND e.location_id=@location
 						  GROUP BY 	p.patient_id
-					  
-
-				
-				
 			) inicio
 		GROUP BY patient_id	
-	)inicio_real
+		
+	) inicio_real
 		INNER JOIN person p ON p.person_id=inicio_real.patient_id
 		
 		LEFT JOIN 
@@ -162,7 +159,7 @@ left join
 					ps.end_date IS NULL AND location_id=@location AND ps.start_date<=@endDate		
 
  ) programa_tarv ON programa_tarv.patient_id=inicio_real.patient_id
-) activos
+) inicios
 GROUP BY patient_id 
    
    "
@@ -170,44 +167,52 @@ GROUP BY patient_id
 sql_query_openmrs_consulta_info <-  "
 
 Select DATE_FORMAT(visitas.encounter_datetime  ,'%Y/%m/%d')  as date_visit , DATE_FORMAT(o.value_datetime  ,'%Y/%m/%d') 
-as next_scheduled, o.uuid
+as next_scheduled, o.uuid, pe.uuid as patient_uuid
 		from
 
 			(	select 	e.patient_id, encounter_datetime
 				from 	encounter e 
-				where 	e.voided=0 and e.encounter_type in (9,6) 
-                and patient_id =@patient_id  
+				inner join obs o on o.encounter_id=e.encounter_id
+				where 	e.voided=0 and o.voided=0  and e.encounter_type in (9,6)  and o.concept_id=1410 
+             
 			) visitas
 			inner join encounter e on e.patient_id=visitas.patient_id
 			inner join obs o on o.encounter_id=e.encounter_id			
-			where o.concept_id=1410 and o.voided=0 and e.voided=0 and e.encounter_datetime=visitas.encounter_datetime and 
-			e.encounter_type in (9,6)  and e.location_id=@location  group by date_visit  order  by  date_visit desc    
+			inner join person pe on pe.person_id=e.patient_id
+			where o.concept_id=1410 and pe.voided=0 and o.voided=0 and e.voided=0 and e.encounter_datetime=visitas.encounter_datetime and 
+			e.encounter_type in (9,6)  and e.location_id=@location    
 "
 
 
 
 sql_query_openmrs_levant_info <-  "
+
 Select DATE_FORMAT(visitas.encounter_datetime ,'%Y/%m/%d')  as pickup_date ,DATE_FORMAT(o.value_datetime, '%Y/%m/%d') as next_scheduled,
-   o.uuid
+   o.uuid,
+   pe.uuid as patient_uuid
 		from
 
 			(	select 	e.patient_id, encounter_datetime
 				from 	encounter e 
-				where 	e.voided=0 and e.encounter_type = 18
-                and patient_id =@patient_id  
+				where 	e.voided=0 and e.encounter_type = 18 
 			) visitas
+			
 			inner join encounter e on e.patient_id=visitas.patient_id
+			inner join person pe on pe.person_id =e.patient_id
 			inner join obs o on o.encounter_id=e.encounter_id			
-			where o.concept_id=5096 and o.voided=0 and e.voided=0 and e.encounter_datetime=visitas.encounter_datetime and 
-			e.encounter_type =18  and e.location_id=@location group by pickup_date order  by  pickup_date desc
+			where o.concept_id=5096 and o.voided=0 and e.voided=0 and pe.voided=0 and e.encounter_datetime=visitas.encounter_datetime and 
+			e.encounter_type =18  and e.location_id=@location 
             
 "
 
 
+
 sql_query_openmrs_viral_load_info <- "
   
+  select uuid, if(valor_ultima_carga is null ,carga_viral_qualitativa , valor_ultima_carga ) as viral_load_value,
+  viral_load_type , data_cv , origem_result, patient_uuid
   
-  select uuid, if(valor_ultima_carga is null ,carga_viral_qualitativa , valor_ultima_carga ) as viral_load_value,viral_load_type , data_cv , origem_result  from (SELECT 	e.patient_id,
+  from (SELECT 	e.patient_id,
 				CASE o.value_coded
                 WHEN 1306  THEN  'Nivel baixo de detencao'
                 WHEN 23814 THEN  'Indectetavel'
@@ -222,21 +227,22 @@ sql_query_openmrs_viral_load_info <- "
 				        DATE_FORMAT(ult_cv.data_cv_qualitativa  ,'%Y/%m/%d')  as data_cv,
                 o.value_numeric  as valor_ultima_carga,
                 fr.name as origem_result,
-                o.uuid
+                o.uuid,
+                pe.uuid as patient_uuid
                 FROM  encounter e 
                 inner join	(
 							SELECT 	e.patient_id,encounter_datetime as data_cv_qualitativa
 							from encounter e inner join obs o on e.encounter_id=o.encounter_id
 							where e.encounter_type IN (6,9,13,53) AND e.voided=0 AND o.voided=0 AND o.concept_id in( 856, 1305)
-							 and patient_id =@patient_id
 				) ult_cv 
                 on e.patient_id=ult_cv.patient_id
+        inner join person pe on pe.person_id =e.patient_id
 				inner join obs o on o.encounter_id=e.encounter_id 
                  left join form fr on fr.form_id = e.form_id
                  where e.encounter_datetime=ult_cv.data_cv_qualitativa	
-				and	e.voided=0  AND  e.location_id=@location AND   e.encounter_type in (6,9,13,53) and
+				and	e.voided=0 and pe.voided=0 AND  e.location_id=@location AND   e.encounter_type in (6,9,13,53) and
 				o.voided=0 AND 	o.concept_id in( 856, 1305) 
-        and e.location_id=@location  group by encounter_datetime order  by  encounter_datetime desc ) cv 
+        and e.location_id=@location ) cv 
 "
 
 sql_openmrs_patient_program <- "
@@ -259,7 +265,7 @@ sql_openmrs_patient_program <- "
 			FROM 	patient p 
 					INNER JOIN patient_program pg ON p.patient_id=pg.patient_id
 					INNER JOIN patient_state ps ON pg.patient_program_id=ps.patient_program_id
-			WHERE 	pg.voided=0 AND ps.voided=0 AND p.voided=0 AND p.patient_id =@patient_id AND
+			WHERE 	pg.voided=0 AND ps.voided=0 AND p.voided=0 AND
 					pg.program_id=2  AND location_id=@location   order by pg.patient_id, data_admissao desc
 			"
 sql_mpi_patient_program <-"
@@ -309,4 +315,32 @@ SELECT
     viral_load.patient_uuid
 FROM ccs_mpi.viral_load
 where patient_uuid = @patient_id ;
+"
+
+sql_post_insert_patient <- 
+"
+INSERT INTO ccs_mpi.patient ( patientid, uuid,given_name,middle_name,family_name, full_name,birth_date,gender,idade_actual,programa_tarv,activo_33_dia,dead,death_date,cause_of_death,identifier,distrito,bairro,ponto_referencia,consentimento,data_inicio_tarv,location_uuid)
+select 
+patient_id,
+uuid,
+given_name,
+middle_name,
+family_name,
+NomeCompleto,
+STR_TO_DATE(birthdate, '%d/%m/%Y'),
+gender,
+idade_actual,
+state,
+estado,
+if(death='',0, convert(death , SIGNED INTEGER)  ),
+STR_TO_DATE(death_date, '%d/%m/%Y'),
+cause_of_death,
+NID,
+Distrito,
+Bairro,
+PontoReferencia,
+'',
+STR_TO_DATE(data_inicio, '%d/%m/%Y'), 
+location from  temp_patients;
+
 "
