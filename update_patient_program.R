@@ -52,7 +52,7 @@ if(class(con_mpi)[1]=="MySQLConnection"){
               
               df_openmrs_patient_program$location_uuid <- location_uuid
               df_openmrs_patient_program[is.na(df_openmrs_patient_program)] <- "2000/01/01"
-              UpdateMpiData(df = df_update_patient_program,table.name = "patient_program",con.sql = con_mpi)
+              UpdateMpiData(df = df_openmrs_patient_program,table.name = "patient_program",con.sql = con_mpi)
               
                 # If process finished sucessfully
                 

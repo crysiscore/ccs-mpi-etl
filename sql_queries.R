@@ -246,8 +246,7 @@ sql_query_openmrs_viral_load_info <- "
 "
 
 sql_openmrs_patient_program <- "
-
-			SELECT 	pg.patient_id,
+      select pe.uuid as patient_uuid,
 			case ps.state
             when 6 then  'ACTIVO NO PROGRAMA'
             when 7 then  'TRANSFERIDO PARA'
@@ -261,11 +260,11 @@ sql_openmrs_patient_program <- "
               DATE_FORMAT(pg.date_completed,'%Y/%m/%d') as data_fim_tratamento,
               DATE_FORMAT(ps.end_date ,'%Y/%m/%d')  as data_saida,
               pg.uuid
-  
 			FROM 	patient p 
 					INNER JOIN patient_program pg ON p.patient_id=pg.patient_id
 					INNER JOIN patient_state ps ON pg.patient_program_id=ps.patient_program_id
-			WHERE 	pg.voided=0 AND ps.voided=0 AND p.voided=0 AND
+					INNER JOIN person pe on pe.person_id =p.patient_id
+			WHERE 	pg.voided=0 AND ps.voided=0 AND p.voided=0 AND pe.voided=0 AND
 					pg.program_id=2  AND location_id=@location   order by pg.patient_id, data_admissao desc
 			"
 sql_mpi_patient_program <-"
