@@ -371,6 +371,22 @@ createSqlQueryGetMPIDPatProgram <- function( param.patientid,param.location){
   
 }
 
+
+#' Cria query com parametros de entrada
+#' 
+#' @param openmrs.con objecto de conexao com mysql    
+#' @return sql query
+#' @examples
+#' sql_drug_pickup = createSqlQueryGetOpenMRSAttribute(con_openmrs)
+createSqlQueryGetOpenMRSAttribute <- function( param.patientid,param.location){
+  
+  sql_tmp <- sql_openmrs_patient_telfone
+ 
+  sql_tmp
+  
+}
+
+
 #' Create MySQL insert query
 #' 
 #' @param df data_frame to insert  
@@ -526,13 +542,13 @@ UpdateMpiData <- function( df,table.name, con.sql){
       
       estado    <- df$estado[i]
       data_admissao <- df$data_admissao[i]
-      data_inscricao   <- df$data_inscricao[i]
+      data_saida  <- df$data_saida[i]
       data_fim_tratamento  <- df$data_fim_tratamento[i]
       patient_uuid   <- df$patient_uuid[i]
       location_uuid  <- df$location_uuid[i]
       uuid           <- df$uuid[i]
       
-      insert_string <- paste0("INSERT INTO ccs_mpi.patient_program (estado, data_admissao,  data_fim_tratamento, patient_uuid, location_uuid, uuid) VALUES( '", estado, "' , '" , data_admissao,"' , '" , data_fim_tratamento,"' , '", patient_uuid,"' , '",location_uuid, "' , '"  , uuid ,"' );" )
+      insert_string <- paste0("INSERT INTO ccs_mpi.patient_program (estado, data_admissao, data_saida, data_fim_tratamento, patient_uuid, location_uuid, uuid) VALUES( '", estado, "' , '" , data_admissao,"' , '" , data_saida,"' , '" , data_fim_tratamento,"' , '", patient_uuid,"' , '",location_uuid, "' , '"  , uuid ,"' );" )
       
       result <- tryCatch({
         
@@ -566,7 +582,51 @@ UpdateMpiData <- function( df,table.name, con.sql){
       #print(result)
       
     }
+ }
+ else if(table.name=="person_attribute"){
+    
+    for (i in 1:nrow(df)) {
+      
+      person_attribute_type    <- df$person_attribute_type[i]
+      value <- df$value[i]
+      patient_uuid <- df$patient_uuid[i]
+      
+      insert_string <- paste0(" INSERT INTO ccs_mpi.person_attribute(patient_uuid,person_attribute_type,value) values ( '", patient_uuid, "' , '" , person_attribute_type, "' , '" , value ,"' );" )
+    
+      result <- tryCatch({
+        
+        dbExecute(con.sql, insert_string)
+        
+        
+      },
+      error = function(cond) {
+        error_msg <- paste0(Sys.time(), "  MySQL - Nao foi possivel inserir  o atributo telefone  do paciente: ", patient_uuid, '  value:',value, "...")
+        writeLog(file = log_file,msg = error_msg)
+        writeLog(file = log_file,msg = as.character(cond))
+        
+        # saveErrorLog(mpi.con = con_mpi, process.date = Sys.time(),process.type = 'Insert on table patient program',affected.rows = 0,
+        #              process.status ='Failed', error.msg = as.character(cond)  , table = table.name ,location.uuid = location_uuid)
+        # saveErrorLog(mpi.con = con_mpi, process.date = Sys.time(),process.type = 'Insert on table patient program',affected.rows = 0,
+        #              process.status ='Failed', error.msg = error_msg  , table = table.name ,location.uuid = location_uuid)
+        
+      },
+      warning = function(cond) {
+        writeLog(file = log_file,msg = as.character(cond))
+        # Choose a return value in case of warning
+        print(as.character(cond))
+        
+      },
+      finally = {
+        # NOTE:
+        # Here goes everything that should be executed at the end,
+        
+      })
+      #TODO comment this when running in production
+      #print(result)
+      
+    }
   }
+  
  else{
    # Do nothing
    }

@@ -343,3 +343,23 @@ STR_TO_DATE(data_inicio, '%d/%m/%Y'),
 location from  temp_patients;
 
 "
+
+
+sql_openmrs_patient_telefone <- "
+ SELECT    pe.uuid  as patient_uuid, case person_attribute_type_id 
+when 9 then 'telefone' end as person_attribute_type,  p.value
+		FROM person_attribute p inner join person pe on pe.person_id=p.person_id
+     WHERE  p.person_attribute_type_id=9  and pe.voided=0 and p.voided=0
+    AND p.value IS NOT NULL AND p.value<>''  ;
+"
+
+sql_set_null_empty_dates <- "
+
+
+update drug_pickup set next_scheduled = null where next_scheduled ='2000/01/01';
+update patient_program set data_admissao = null where data_admissao ='2000/01/01';
+update patient_program set data_fim_tratamento = null where data_fim_tratamento ='2000/01/01';
+update patient_program set data_saida = null where data_saida ='2000/01/01';
+update patient_visit set next_scheduled = null where next_scheduled ='2000/01/01';
+
+"
