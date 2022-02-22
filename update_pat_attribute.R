@@ -3,8 +3,7 @@ library(RMySQL)
 library(dplyr)
 #Set working dir
 
-wd <- '/home/agnaldo/Git/ccs-mpi-etl'
-setwd(wd)
+source('config/parameters.R')
 source('config/db-connection.R')
 source('helper_functions.R')
 source('sql_queries.R')
