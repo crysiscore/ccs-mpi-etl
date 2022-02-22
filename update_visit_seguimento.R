@@ -51,6 +51,8 @@ if(class(con_mpi)[1]=="MySQLConnection"){
           df_openmrs_patient_seguimentos   <- getOpenmrsData(con.openmrs = con_openmrs ,query = sql_openmrs_patient_seguimentos )
           
           if(nrow(df_openmrs_patient_seguimentos) >0 ) {
+            # drop existing data
+            dbGetQuery(conn = con_mpi,statement = paste0("delete from patient_visit where location_uuid = '",location_uuid,"' ;" ))
             
             df_openmrs_patient_seguimentos$location_uuid <- location_uuid
             df_openmrs_patient_seguimentos[is.na(df_openmrs_patient_seguimentos)] <- "2000/01/01"

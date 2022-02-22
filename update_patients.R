@@ -68,6 +68,15 @@ if(class(con_mpi)[1]=="MySQLConnection"){
               patients_openmrs$location <- location_uuid
               assign(paste0("patients_", db), patients_openmrs)
               temp_patients <- plyr::rbind.fill(temp_patients,get(paste0("patients_", db)))
+              dbGetQuery(conn = con_mpi, "drop table if exists temp_patients; ")
+              dbSendQuery(conn = con_mpi,statement = "SET GLOBAL local_infile=1;")
+              status = dbWriteTable(conn = con_mpi, name = 'temp_patients', value = temp_patients , row.names = F, append = F)
+              if(status){
+                dbGetQuery(conn = con_mpi,statement = paste0("delete from patient where location_uuid = '",location_uuid, "' ;"))
+                dbGetQuery(conn = con_mpi,statement = sql_post_insert_patient)
+                temp_patients <- temp_patients[0,]
+              }
+              
               rm(patients_openmrs)
               
             }
@@ -102,19 +111,19 @@ if(class(con_mpi)[1]=="MySQLConnection"){
       
       
     }
-    if(nrow(temp_patients)> 0){
-      
-      #dbSendQuery(conn = con_mpi,statement = "ALTER TABLE patient ADD PRIMARY KEY (patientid, uuid); ")
-      dbGetQuery(conn = con_mpi, "drop table if exists temp_patients; ")
-      dbSendQuery(conn = con_mpi,statement = "SET GLOBAL local_infile=1;")
-      status = dbWriteTable(conn = con_mpi, name = 'temp_patients', value = temp_patients , row.names = F, append = F)
-      if(status){
-       
-         dbGetQuery(conn = con_mpi,statement = sql_post_insert_patient)
-      }
-      
-      
-    }
+    # if(nrow(temp_patients)> 0){
+    #   
+    #   #dbSendQuery(conn = con_mpi,statement = "ALTER TABLE patient ADD PRIMARY KEY (patientid, uuid); ")
+    #   dbGetQuery(conn = con_mpi, "drop table if exists temp_patients; ")
+    #   dbSendQuery(conn = con_mpi,statement = "SET GLOBAL local_infile=1;")
+    #   status = dbWriteTable(conn = con_mpi, name = 'temp_patients', value = temp_patients , row.names = F, append = F)
+    #   if(status){
+    #    
+    #      dbGetQuery(conn = con_mpi,statement = sql_post_insert_patient)
+    #   }
+    #   
+    #   
+    # }
 
     dbDisconnect(con_mpi)
     rm(con_mpi) 

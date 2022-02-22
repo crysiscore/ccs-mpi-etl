@@ -47,6 +47,9 @@ if(class(con_mpi)[1]=="MySQLConnection"){
           df_openmrs_patient_pat_attribute   <- getOpenmrsData(con.openmrs = con_openmrs ,query = sql_openmrs_patient_telefone )
           if(nrow(df_openmrs_patient_pat_attribute) >0 ) {
             
+            # drop existing data
+            dbGetQuery(conn = con_mpi,statement = paste0("delete from  ccs_mpi.person_attribute where patient_uuid in (select uuid from patient where location_uuid ='",location_uuid,"' ) ;" ))
+            
             #dbGetQuery(conn = con_mpi, statement = paste0("delete from viral_load where location_uuid = '",location_uuid,"' ;"))    
             UpdateMpiData(df = df_openmrs_patient_pat_attribute,table.name = "person_attribute",con.sql = con_mpi)
             # If process finished sucessfully

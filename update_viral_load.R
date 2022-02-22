@@ -51,9 +51,10 @@ if(class(con_mpi)[1]=="MySQLConnection"){
     
                   df_openmrs_patient_carga_viral[is.na(df_openmrs_patient_carga_viral)] <- "2000/01/01"
               
-                  dbGetQuery(conn = con_mpi, statement = paste0("delete from viral_load where location_uuid = '",location_uuid,"' ;"))    
-                 
-                   UpdateMpiData(df = df_openmrs_patient_carga_viral,table.name = "viral_load",con.sql = con_mpi)
+                  # drop existing data
+                  dbGetQuery(conn = con_mpi,statement = paste0("delete from viral_load where location_uuid = '",location_uuid,"' ;" ))
+                  
+                  UpdateMpiData(df = df_openmrs_patient_carga_viral,table.name = "viral_load",con.sql = con_mpi)
                   
                 # If process finished sucessfully
      

@@ -49,6 +49,9 @@ if(class(con_mpi)[1]=="MySQLConnection"){
             
             if(nrow(df_openmrs_patient_program) >0 ) {
               
+              # drop existing data
+              dbGetQuery(conn = con_mpi,statement = paste0("delete from patient_program where location_uuid = '",location_uuid,"' ;" ))
+              
               df_openmrs_patient_program$location_uuid <- location_uuid
               df_openmrs_patient_program[is.na(df_openmrs_patient_program)] <- "2000/01/01"
               UpdateMpiData(df = df_openmrs_patient_program,table.name = "patient_program",con.sql = con_mpi)
