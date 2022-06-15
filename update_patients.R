@@ -38,19 +38,23 @@ if(class(con_mpi)[1]=="MySQLConnection"){
           location <- getOpenmrsDefaultLocation(openmrs.con = con_openmrs,db.name = db)
           curr_date <- Sys.Date()
           curr_datetime <-Sys.time()
+          
           if(nrow(location)==1){
             location_id   <- location$location_id[1]
             location_uuid <- location$uuid[1]
             # Get Patient data
             sql_query_openmrs_patients  <- createSqlQueryPatient(param.location = location_id,param.end.date = curr_date)
+            
+            saveProcessLog(mpi.con = con_mpi,process.date = curr_datetime,process.type = 'Fetch Patients',affected.rows = 0,
+                           process.status ='Initiated',error.msg = '' ,table = 'patient', location.uuid = location_uuid,elapsed.time="")
             #TODO - remove later
             #sql_query_mpi_patients  <- createSqlQueryPatientMpi(param.location = location_uuid)
             patients_openmrs    <- getOpenmrsData(con.openmrs = con_openmrs,query = sql_query_openmrs_patients)
             #TODO - remove later
             #patients_mpi        <- getMasterPatientIndexData(con.openmrs = con_mpi, query = sql_query_mpi_patients)
             
-            
-        
+            before <-  Sys.time()
+          
             if(nrow(patients_openmrs) > 0){
               patients_openmrs$NomeCompleto    <- removeSpecialCharacters(patients_openmrs$NomeCompleto)
               patients_openmrs$given_name      <- removeSpecialCharacters(patients_openmrs$given_name)
@@ -75,6 +79,20 @@ if(class(con_mpi)[1]=="MySQLConnection"){
                 dbGetQuery(conn = con_mpi,statement = paste0("delete from patient where location_uuid = '",location_uuid, "' ;"))
                 dbGetQuery(conn = con_mpi,statement = sql_post_insert_patient)
                 temp_patients <- temp_patients[0,]
+                # If process finished sucessfully
+                
+                after <- Sys.time()
+                elapsed_time <- round((after -before)/60,digits = 2)
+                saveProcessLog(mpi.con = con_mpi,process.date = curr_datetime,process.type = 'Fetch Patients',affected.rows = nrow(patients_openmrs),
+                               process.status ='Finished',error.msg = '' ,table = 'patient', location.uuid = location_uuid,elapsed.time=as.character(elapsed_time))
+                
+                writeLog(file = log_file,msg =paste0("-------------------------------------------------------------------------------------------"))
+                writeLog(file = log_file,msg =paste0("-- Fetch Patients for DB: ", db, " took ", elapsed_time))
+                writeLog(file = log_file,msg =paste0("-------------------------------------------------------------------------------------------"))
+                print(paste0("-------------------------------------------------------------------------------------------"))
+                print(paste0("-- Fetch Patients for DB: ",db, " took ", elapsed_time))
+                print(paste0("-------------------------------------------------------------------------------------------"))
+                
               }
               
               rm(patients_openmrs)
